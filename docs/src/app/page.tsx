@@ -62,16 +62,20 @@ export default function Home() {
       <header className="max-w-[68ch]">
         <p className="eyebrow">streamfield</p>
         <h1 className="type-display mt-6 text-[clamp(48px,8vw,84px)]">
-          The streaming-UI piece
+          Your streaming AI UI
           <br />
-          your AI app is{' '}
-          <span className="text-[color:var(--color-accent)]">missing.</span>
+          feels{' '}
+          <span className="text-[color:var(--color-accent)]">broken.</span>
         </h1>
         <p className="mt-8 max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]">
-          A React primitive for rendering Vercel AI SDK partial-object streams with
-          field-by-field reveal physics. Diffs successive snapshots, derives per-field
-          pending → streaming → complete state, hands you the state via render prop.
-          Style it however you want.
+          If you&apos;ve built a UI on `streamObject` from the Vercel AI SDK, you know
+          the feeling: the title flickers in, the bullets snap into the DOM, the summary
+          rewrites itself mid-render. CSS transitions can&apos;t see what changed.
+          streamfield can. It diffs each partial-object snapshot, tells you which
+          fields are still arriving, and hands the state to your children via render prop.
+        </p>
+        <p className="mt-4 max-w-[60ch] type-mono-tiny text-[color:var(--color-ink-faint)]">
+          For: anyone who&apos;s shipped a streamObject UI and watched the fields land like a slot machine.
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <code className="rounded-lg border border-[color:var(--color-divider)] bg-[color:var(--color-canvas-2)] px-4 py-2 type-mono text-[color:var(--color-ink)]">
@@ -88,11 +92,14 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Playground */}
-      <section className="mt-20 grid gap-8 md:grid-cols-[1fr_1fr]">
-        <div className="surface p-6">
-          <p className="eyebrow">playground</p>
-          <div className="mt-4 flex items-center gap-3">
+      {/* Playground — controls on top, side-by-side render below.
+          The left pane shows raw partials (the broken default). The
+          right pane runs the same partial through streamfield. Scrub
+          the slider; the difference makes the case. */}
+      <section className="mt-16 surface p-6">
+        <p className="eyebrow">playground · before vs. after</p>
+        <div className="mt-4 flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
             <label className="type-mono-tiny text-[color:var(--color-ink-faint)]">
               variant
             </label>
@@ -114,7 +121,7 @@ export default function Home() {
             </div>
           </div>
 
-          <label className="mt-6 block">
+          <label className="block flex-1 min-w-[240px]">
             <span className="type-mono-tiny text-[color:var(--color-ink-faint)]">
               stream frame {frame + 1} / {FRAMES.length}
             </span>
@@ -127,51 +134,79 @@ export default function Home() {
               className="mt-2 w-full accent-[color:var(--color-accent)]"
             />
           </label>
-
-          <p className="mt-8 type-mono-tiny text-[color:var(--color-ink-faint)]">
-            scrub the slider — fields enter as they appear in the partial
-          </p>
         </div>
 
-        <div className="surface p-6">
-          <p className="eyebrow">render</p>
-          <div className="mt-6">
-            <StreamingReveal<Suggestion> stream={stream} variant={variant} done={done}>
-              {(f) => (
-                <article className="space-y-4">
-                  <h2
-                    data-streamfield-state={f.title?.state}
-                    className="text-[clamp(20px,2.4vw,28px)] font-medium text-[color:var(--color-ink)]"
-                  >
-                    {f.title?.value ?? ' '}
-                  </h2>
-                  <p
-                    data-streamfield-state={f.summary?.state}
-                    className="max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]"
-                  >
-                    {f.summary?.value ?? ' '}
+        <p className="mt-3 type-mono-tiny text-[color:var(--color-ink-faint)]">
+          Scrub the slider. Watch the left pane flicker as fields snap in. Watch the right pane handle it.
+        </p>
+
+        <div className="mt-8 grid gap-6 md:grid-cols-2">
+          <div className="rounded-lg border border-[color:var(--color-divider)] bg-[color:var(--color-canvas-2)]/40 p-5">
+            <p className="eyebrow text-[color:var(--color-fail)]/70">without streamfield</p>
+            <div className="mt-5 min-h-[200px]">
+              <article className="space-y-4">
+                <h2 className="text-[clamp(20px,2.4vw,28px)] font-medium text-[color:var(--color-ink)]">
+                  {stream.title ?? ''}
+                </h2>
+                <p className="max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]">
+                  {stream.summary ?? ''}
+                </p>
+                {stream.bullets && (
+                  <ul className="space-y-1 type-mono text-[color:var(--color-ink)]">
+                    {stream.bullets.map((b, i) => (
+                      <li key={i}>· {b}</li>
+                    ))}
+                  </ul>
+                )}
+                {stream.confidence !== undefined && (
+                  <p className="type-mono-tiny text-[color:var(--color-ink-faint)]">
+                    confidence {(stream.confidence * 100).toFixed(0)}%
                   </p>
-                  {f.bullets?.value && (
-                    <ul
-                      data-streamfield-state={f.bullets?.state}
-                      className="space-y-1 type-mono text-[color:var(--color-ink)]"
+                )}
+              </article>
+            </div>
+          </div>
+
+          <div className="rounded-lg border border-[color:var(--color-accent)]/40 bg-[color:var(--color-canvas-2)]/40 p-5">
+            <p className="eyebrow text-[color:var(--color-accent)]">with streamfield</p>
+            <div className="mt-5 min-h-[200px]">
+              <StreamingReveal<Suggestion> stream={stream} variant={variant} done={done}>
+                {(f) => (
+                  <article className="space-y-4">
+                    <h2
+                      data-streamfield-state={f.title?.state}
+                      className="text-[clamp(20px,2.4vw,28px)] font-medium text-[color:var(--color-ink)]"
                     >
-                      {f.bullets.value.map((b, i) => (
-                        <li key={i}>· {b}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {f.confidence?.value !== undefined && (
+                      {f.title?.value ?? ' '}
+                    </h2>
                     <p
-                      data-streamfield-state={f.confidence?.state}
-                      className="type-mono-tiny text-[color:var(--color-ink-faint)]"
+                      data-streamfield-state={f.summary?.state}
+                      className="max-w-[60ch] type-mono text-[color:var(--color-ink-muted)]"
                     >
-                      confidence {(f.confidence.value * 100).toFixed(0)}%
+                      {f.summary?.value ?? ' '}
                     </p>
-                  )}
-                </article>
-              )}
-            </StreamingReveal>
+                    {f.bullets?.value && (
+                      <ul
+                        data-streamfield-state={f.bullets?.state}
+                        className="space-y-1 type-mono text-[color:var(--color-ink)]"
+                      >
+                        {f.bullets.value.map((b, i) => (
+                          <li key={i}>· {b}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {f.confidence?.value !== undefined && (
+                      <p
+                        data-streamfield-state={f.confidence?.state}
+                        className="type-mono-tiny text-[color:var(--color-ink-faint)]"
+                      >
+                        confidence {(f.confidence.value * 100).toFixed(0)}%
+                      </p>
+                    )}
+                  </article>
+                )}
+              </StreamingReveal>
+            </div>
           </div>
         </div>
       </section>
@@ -180,7 +215,7 @@ export default function Home() {
       <section className="mt-20 max-w-[68ch]">
         <p className="eyebrow">usage</p>
         <h2 className="type-display mt-4 text-[clamp(28px,3.4vw,40px)]">
-          A render-prop, not a kitchen sink.
+          One render prop. Four props. Done.
         </h2>
         <pre className="mt-6 overflow-x-auto rounded-lg border border-[color:var(--color-divider)] bg-[color:var(--color-canvas-2)] p-5 text-[13px] leading-[1.6] text-[color:var(--color-ink-muted)]">
           <code>{`import { StreamingReveal } from 'streamfield';
