@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ElementType, ReactNode } from 'react';
 
 export type FieldState = 'pending' | 'streaming' | 'complete';
 
@@ -10,6 +10,18 @@ export type FieldStateMap<T extends object> = {
 };
 
 export type RevealVariant = 'cascade' | 'shimmer' | 'underline-fill';
+
+export type TypewriterProps = {
+  /** Full target text. Component reveals it character by character. */
+  text: string;
+  /** Milliseconds between each character. Default 22ms (~45 chars/sec). */
+  speed?: number;
+  /** Show a blinking caret while typing. Default false. */
+  cursor?: boolean;
+  /** Element to render as. Default `'span'`. */
+  as?: ElementType;
+  className?: string;
+};
 
 export type StreamingRevealProps<T extends object> = {
   /**

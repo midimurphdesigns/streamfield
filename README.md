@@ -1,10 +1,16 @@
 # streamfield
 
-A React primitive for rendering Vercel AI SDK partial-object streams with field-by-field reveal physics. The streaming-UI piece your AI app is missing.
+A React toolkit for the streaming UI patterns AI apps actually need. Render Vercel AI SDK partial-object streams with field-by-field reveal physics, type out text fields at deliberate cadence, and rate-limit fast-arriving lists so visitors can actually watch the agent think.
 
 ```bash
 npm install streamfield
 ```
+
+## What's in 0.2
+
+- **`<StreamingReveal>`** — render-prop component that diffs partial-object snapshots into per-field `pending / streaming / complete` state. The original primitive.
+- **`<Typewriter>` + `useTextReveal`** — character-by-character text reveal with optional caret. The natural sibling for AI-generated string fields.
+- **`usePacedList`** — rate-limit the visible length of a growing list to a minimum cadence. Fixes the "all 6 reasoning steps arrived in one frame" problem.
 
 ## What it does
 
@@ -34,6 +40,27 @@ function Suggestion({ partial, done }) {
   );
 }
 ```
+
+## Typewriter
+
+```tsx
+import { Typewriter } from 'streamfield';
+
+<Typewriter text={reasoning} speed={22} cursor />
+```
+
+`speed` is ms between characters (default 22 ≈ 45 cps). `cursor` toggles a blinking caret while typing.
+
+## usePacedList
+
+```tsx
+import { usePacedList } from 'streamfield';
+
+const visible = usePacedList(steps, 480);
+return visible.map((s) => <ReasoningStep key={s.id} {...s} />);
+```
+
+Given a list that grows over time (from `streamObject`'s `partialObjectStream`, an SSE feed, anywhere), `usePacedList` returns a prefix that reveals one item at a time at `intervalMs` cadence — even if all items arrived in the same network frame.
 
 ## Variants
 
