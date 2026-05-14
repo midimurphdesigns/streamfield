@@ -1,0 +1,56 @@
+{
+  "name": "streamfield",
+  "version": "0.1.0",
+  "description": "A React primitive for rendering Vercel AI SDK partial-object streams with field-by-field reveal physics. The streaming-UI piece your AI app is missing.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./styles.css": "./dist/styles.css"
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": ["**/*.css"],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext ts,tsx"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "eslint": "^9.16.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "react",
+    "ai",
+    "streaming",
+    "vercel-ai-sdk",
+    "anthropic",
+    "llm",
+    "ui",
+    "generative-ui"
+  ],
+  "author": "Kevin Murphy <kmurphywebdev@gmail.com> (https://kevinmurphywebdev.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/midimurphdesigns/streamfield.git"
+  },
+  "homepage": "https://streamfield.kevinmurphywebdev.com",
+  "bugs": "https://github.com/midimurphdesigns/streamfield/issues"
+}

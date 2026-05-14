@@ -1,0 +1,79 @@
+/**
+ * streamfield default styles.
+ *
+ * Optional — consumers can ignore this and write their own selectors
+ * against the [data-streamfield-state] attribute. Import via:
+ *
+ *   import 'streamfield/styles.css';
+ *
+ * Tokens are CSS variables so consumers can override them without
+ * touching the source.
+ */
+:root {
+  --streamfield-accent: #4dffff;
+  --streamfield-cascade-duration: 360ms;
+  --streamfield-cascade-easing: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --streamfield-shimmer-duration: 1400ms;
+}
+
+[data-streamfield='root'] [data-streamfield-state='pending'] {
+  opacity: 0;
+  visibility: hidden;
+}
+
+[data-streamfield='root'][data-streamfield-variant='cascade']
+  [data-streamfield-state='streaming'],
+[data-streamfield='root'][data-streamfield-variant='cascade']
+  [data-streamfield-state='complete'] {
+  animation: streamfield-cascade var(--streamfield-cascade-duration)
+    var(--streamfield-cascade-easing) both;
+}
+
+@keyframes streamfield-cascade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+[data-streamfield='root'][data-streamfield-variant='shimmer']
+  [data-streamfield-state='streaming'] {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--streamfield-accent) 20%, transparent) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: streamfield-shimmer var(--streamfield-shimmer-duration) linear infinite;
+}
+
+@keyframes streamfield-shimmer {
+  0% {
+    background-position: -100% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+[data-streamfield='root'][data-streamfield-variant='underline-fill']
+  [data-streamfield-state='streaming'] {
+  border-bottom: 1px solid color-mix(in srgb, var(--streamfield-accent) 60%, transparent);
+  animation: streamfield-underline-fill 1200ms var(--streamfield-cascade-easing) both;
+}
+
+@keyframes streamfield-underline-fill {
+  from {
+    border-bottom-color: transparent;
+  }
+  to {
+    border-bottom-color: color-mix(in srgb, var(--streamfield-accent) 60%, transparent);
+  }
+}
