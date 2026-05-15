@@ -3,3 +3,8 @@ dist
 .DS_Store
 *.tsbuildinfo
 .env*
+
+# docs (Next.js documentation site)
+docs/.next/
+docs/next-env.d.ts
+docs/pnpm-lock.yaml
