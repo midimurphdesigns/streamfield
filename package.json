@@ -1,7 +1,7 @@
 {
   "name": "streamfield",
   "version": "0.2.1",
-  "description": "A React primitive for rendering Vercel AI SDK partial-object streams with field-by-field reveal physics. The streaming-UI piece your AI app is missing.",
+  "description": "A small React library for rendering Vercel AI SDK partial-object streams without the flicker. Diffs successive snapshots and exposes per-field pending / streaming / complete state via render prop or data attribute.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

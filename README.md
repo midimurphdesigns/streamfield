@@ -1,6 +1,6 @@
 # streamfield
 
-A React toolkit for the streaming UI patterns AI apps actually need. Render Vercel AI SDK partial-object streams with field-by-field reveal physics, type out text fields at deliberate cadence, and rate-limit fast-arriving lists so visitors can actually watch the agent think.
+A small React library for the streaming UI patterns AI apps actually need. Render Vercel AI SDK partial-object streams without the flicker, type out text fields at deliberate cadence, and rate-limit fast-arriving lists so visitors can watch the agent think.
 
 ```bash
 npm install streamfield
@@ -8,38 +8,108 @@ npm install streamfield
 
 ## What's in 0.2
 
-- **`<StreamingReveal>`** — render-prop component that diffs partial-object snapshots into per-field `pending / streaming / complete` state. The original primitive.
-- **`<Typewriter>` + `useTextReveal`** — character-by-character text reveal with optional caret. The natural sibling for AI-generated string fields.
-- **`usePacedList`** — rate-limit the visible length of a growing list to a minimum cadence. Fixes the "all 6 reasoning steps arrived in one frame" problem.
+- **`<StreamingReveal>`**. Render-prop component that diffs partial-object snapshots into per-field `pending / streaming / complete` state. The original primitive.
+- **`<Typewriter>` and `useTextReveal`**. Character-by-character text reveal with an optional caret. The natural sibling for AI-generated string fields.
+- **`usePacedList`**. Rate-limits the visible length of a growing list to a minimum cadence. Fixes the "all six reasoning steps arrived in one frame" problem.
 
-## What it does
+## The problem
 
-Your AI app uses `streamObject` from the Vercel AI SDK (or any source that emits progressively-completing JSON). Without `streamfield`, the natural result is fields that snap into place jarringly — title appears all at once, summary appears all at once, and the "streaming" feels like a stuttering refresh, not a reveal.
+The Vercel AI SDK's `streamObject` re-sends the whole JSON object every chunk, so naive rendering rewrites the page on every chunk. The title flashes in, the bullets pop into the DOM, the summary keeps overwriting itself. CSS transitions can't help: the elements existed before the stream and exist after it; only their text content changes, and CSS animates property changes, not innerText swaps.
 
-`streamfield` diffs successive snapshots, derives per-field `pending → streaming → complete` state, and hands the state to your children via render prop. You style state transitions however you want — or use the bundled CSS for opinionated defaults.
+## What streamfield does
 
-## Usage
+For every field in your object, streamfield diffs the latest snapshot against the previous one and tells you which of three states the field is in right now:
+
+- **pending**. The field hasn't appeared yet. Reserve space or show a skeleton so layout doesn't jump when it lands.
+- **streaming**. The field is currently being written. Draw the user's eye to it (a shimmer sweep, a growing underline, a soft blur that clears).
+- **complete**. The field has stopped changing. Fire a sound, hide a cursor, enable a button, or trigger any action that needs the field finalized.
+
+State is exposed two ways: as a `data-streamfield-state` attribute on whatever element you stamp it onto (style with plain CSS), and as a render-prop value (act on it in JavaScript).
+
+## End-to-end example with the Vercel AI SDK
 
 ```tsx
-import { StreamingReveal } from 'streamfield';
-import 'streamfield/styles.css'; // optional — opinionated defaults
+// app/api/suggest/route.ts
+import { streamObject } from 'ai';
+import { gateway } from '@ai-sdk/gateway';
+import { z } from 'zod';
 
-function Suggestion({ partial, done }) {
+export async function POST(req: Request) {
+  const { prompt } = await req.json();
+
+  const result = streamObject({
+    model: gateway('openai/gpt-4o-mini'),
+    schema: z.object({
+      title: z.string(),
+      summary: z.string(),
+      bullets: z.array(z.string()),
+    }),
+    prompt,
+  });
+
+  return result.toTextStreamResponse();
+}
+```
+
+```tsx
+// app/page.tsx
+'use client';
+
+import { experimental_useObject as useObject } from 'ai/react';
+import { z } from 'zod';
+import { StreamingReveal } from 'streamfield';
+import 'streamfield/styles.css'; // optional defaults; skip for custom CSS
+
+const schema = z.object({
+  title: z.string(),
+  summary: z.string(),
+  bullets: z.array(z.string()),
+});
+
+type Suggestion = z.infer<typeof schema>;
+
+export default function Page() {
+  const { object, submit, isLoading } = useObject({
+    api: '/api/suggest',
+    schema,
+  });
+
   return (
-    <StreamingReveal stream={partial} done={done} variant="cascade">
-      {(f) => (
-        <article>
-          <h2 data-streamfield-state={f.title?.state}>{f.title?.value}</h2>
-          <p data-streamfield-state={f.summary?.state}>{f.summary?.value}</p>
-          <ul>
-            {f.bullets?.value?.map((b) => <li key={b}>{b}</li>)}
-          </ul>
-        </article>
-      )}
-    </StreamingReveal>
+    <>
+      <button onClick={() => submit({ prompt: 'top regions by ARR' })}>
+        Ask
+      </button>
+
+      <StreamingReveal<Suggestion>
+        stream={object ?? {}}
+        done={!isLoading}
+        variant="cascade"
+      >
+        {(f) => (
+          <article>
+            <h2 data-streamfield-state={f.title?.state}>
+              {f.title?.value}
+            </h2>
+            <p data-streamfield-state={f.summary?.state}>
+              {f.summary?.value}
+            </p>
+            <ul data-streamfield-state={f.bullets?.state}>
+              {f.bullets?.value?.map((b, i) => <li key={i}>{b}</li>)}
+            </ul>
+          </article>
+        )}
+      </StreamingReveal>
+    </>
   );
 }
 ```
+
+What's happening:
+
+- `useObject` from the Vercel AI SDK calls `/api/suggest`, streams the response, and exposes the in-progress partial object as `object`.
+- That partial is handed to `<StreamingReveal>` as `stream`, with `done={!isLoading}` so the component knows when the stream finishes.
+- Inside the render-prop, every field in your schema is `f.<fieldName>` with a `state` (one of `pending`, `streaming`, `complete`) and a `value`. Stamp the state onto the element with `data-streamfield-state` and style it however you like.
+- If you imported `streamfield/styles.css`, the three variants (`cascade`, `shimmer`, `underline-fill`) handle the animation for you. If you didn't, write your own selectors against the data attribute.
 
 ## Typewriter
 
@@ -49,7 +119,7 @@ import { Typewriter } from 'streamfield';
 <Typewriter text={reasoning} speed={22} cursor />
 ```
 
-`speed` is ms between characters (default 22 ≈ 45 cps). `cursor` toggles a blinking caret while typing.
+`speed` is milliseconds between characters (default 22, about 45 chars/sec). `cursor` toggles a blinking caret while typing. `Typewriter` is append-only: if `text` grows over time (a streaming string field), it continues from where it was rather than restarting.
 
 ## usePacedList
 
@@ -60,21 +130,21 @@ const visible = usePacedList(steps, 480);
 return visible.map((s) => <ReasoningStep key={s.id} {...s} />);
 ```
 
-Given a list that grows over time (from `streamObject`'s `partialObjectStream`, an SSE feed, anywhere), `usePacedList` returns a prefix that reveals one item at a time at `intervalMs` cadence — even if all items arrived in the same network frame.
+Given a list that grows over time (from `streamObject`'s `partialObjectStream`, an SSE feed, anywhere), `usePacedList` returns a prefix that reveals one item at a time at `intervalMs` cadence, even if every item arrived in the same network frame.
 
 ## Variants
 
-- **`cascade`** (default) — per-element opacity + y-translate + blur ease in
-- **`shimmer`** — cyan-tinted gradient sweeps across the field until complete
-- **`underline-fill`** — animated underline draws as the field streams
+- **`cascade`** (default). Per-element opacity, y-translate, and blur ease in.
+- **`shimmer`**. Cyan-tinted gradient sweeps across the field until complete.
+- **`underline-fill`**. Animated underline draws as the field streams.
 
-Or skip the bundled styles entirely and write your own selectors against `[data-streamfield-state='streaming']` / `[data-streamfield-state='complete']`.
+Skip the bundled styles and write your own selectors against `[data-streamfield-state='streaming']` and `[data-streamfield-state='complete']` for full control.
 
 ## API
 
 ```ts
 <StreamingReveal
-  stream={Partial<T>}                  // your partial-object snapshot
+  stream={Partial<T>}                  // current partial-object snapshot
   order?={ReadonlyArray<keyof T>}      // optional reveal order
   variant?={'cascade' | 'shimmer' | 'underline-fill'}
   done?={boolean}                      // forces remaining fields to complete
@@ -84,29 +154,22 @@ Or skip the bundled styles entirely and write your own selectors against `[data-
 </StreamingReveal>
 ```
 
-`fields` is a `FieldStateMap<T>` — `{ [K in keyof T]: { state, value } }`.
+`fields` is a `FieldStateMap<T>`: `{ [K in keyof T]: { state, value } }`. The `useFieldStates` hook is also exported if you want the state map without the render-prop wrapper.
 
 ## Why not just CSS transitions?
 
-Because `partial-object → DOM` is not a 1:1 mapping. A field can:
-
-- be absent in one snapshot, present in the next, then change value 4 times in 200ms
-- arrive partially-formed (string still being written, array still being filled)
-- reverse — the model edits its own output mid-stream
-- abort — the stream stops, leaving fields stuck at 30%
-
-CSS transitions can't see any of that. `streamfield` does the diffing and tells you the answer.
+CSS can't see field lifecycle. A field can be absent in one snapshot, present in the next, change value four times in 200ms, arrive partially formed, get edited mid-stream, or get cut off when the stream aborts. None of that produces a CSS-animatable property change. You need a state attribute derived from snapshot comparison to react to any of it, and that's the work streamfield does for you.
 
 ## Live demo
 
-[streamfield.kevinmurphywebdev.com](https://streamfield.kevinmurphywebdev.com) — interactive playground with a slider that scrubs through a partial-object stream so you can see the variants side-by-side.
+[streamfield.kevinmurphywebdev.com](https://streamfield.kevinmurphywebdev.com). Interactive playground with a slider that scrubs through a partial-object stream so you can see the same partial rendered with and without streamfield, side by side.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+MIT. See [LICENSE](./LICENSE).
 
 ## Author
 
-[Kevin Murphy](https://kevinmurphywebdev.com) · Product Engineer · Applied AI · Tempe, AZ.
+[Kevin Murphy](https://kevinmurphywebdev.com). Product Engineer, applied AI, Tempe, AZ.
 
 Extracted from [tablesalt](https://github.com/midimurphdesigns/tablesalt), an in-browser data exploration agent.
